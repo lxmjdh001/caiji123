@@ -32,11 +32,16 @@ class AutoScraper:
         """获取随机请求头"""
         return {
             'User-Agent': self.ua.random,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Cache-Control': 'max-age=0',
+            'DNT': '1',
         }
     
     def search_wechat_articles(self, keyword: str, max_pages: int = 3) -> List[str]:
@@ -60,7 +65,10 @@ class AutoScraper:
         for i, url in enumerate(search_sources[:max_pages]):
             try:
                 print(f"📄 搜索页面 {i+1}: {url}")
-                time.sleep(random.uniform(3, 6))  # 增加延迟
+                # 增加更长的随机延迟，模拟人类行为
+                delay = random.uniform(8, 15)  # 8-15秒延迟
+                print(f"⏳ 等待 {delay:.1f} 秒...")
+                time.sleep(delay)
                 
                 # 增强请求头
                 headers = self.get_headers()
@@ -91,10 +99,16 @@ class AutoScraper:
                     print(f"页面标题: {soup.title.string if soup.title else '无标题'}")
                 
                 # 调试：检查是否有反爬虫提示
-                if "验证码" in response.text or "captcha" in response.text.lower():
-                    print("⚠️ 页面可能包含验证码")
-                if "访问过于频繁" in response.text:
-                    print("⚠️ 访问过于频繁")
+                if "验证码" in response.text or "captcha" in response.text.lower() or "VerifyCode" in response.text:
+                    print("⚠️ 检测到验证码页面，跳过此页面")
+                    continue
+                if "访问过于频繁" in response.text or "环境异常" in response.text:
+                    print("⚠️ 检测到访问限制，等待更长时间...")
+                    time.sleep(random.uniform(30, 60))  # 等待30-60秒
+                    continue
+                if "IP" in response.text and "访问时间" in response.text:
+                    print("⚠️ 检测到IP限制页面，跳过")
+                    continue
                 
                 # 多种方式查找文章链接
                 found_links = set()
