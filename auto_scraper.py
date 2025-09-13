@@ -43,42 +43,113 @@ class AutoScraper:
         """搜索微信公众号文章链接"""
         print(f"🔍 搜索关键词: {keyword}")
         
-        # 这里使用搜狗微信搜索
-        search_urls = [
+        # 使用多个搜索源
+        search_sources = [
+            # 搜狗微信搜索
             f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8",
             f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8&page=2",
-            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8&page=3"
+            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8&page=3",
+            # 百度搜索微信文章
+            f"https://www.baidu.com/s?wd=site:mp.weixin.qq.com {keyword}",
+            # Google搜索（如果可访问）
+            f"https://www.google.com/search?q=site:mp.weixin.qq.com {keyword}"
         ]
         
         article_urls = []
         
-        for url in search_urls[:max_pages]:
+        for i, url in enumerate(search_sources[:max_pages]):
             try:
-                print(f"📄 搜索页面: {url}")
-                time.sleep(random.uniform(2, 4))  # 随机延迟
+                print(f"📄 搜索页面 {i+1}: {url}")
+                time.sleep(random.uniform(3, 6))  # 增加延迟
                 
-                response = self.session.get(url, headers=self.get_headers(), timeout=30)
+                # 增强请求头
+                headers = self.get_headers()
+                headers.update({
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'none',
+                    'Upgrade-Insecure-Requests': '1'
+                })
+                
+                response = self.session.get(url, headers=headers, timeout=30)
                 response.raise_for_status()
                 
                 soup = BeautifulSoup(response.content, 'html.parser')
                 
-                # 查找文章链接
+                # 多种方式查找文章链接
+                found_links = set()
+                
+                # 方法1: 查找搜狗搜索结果中的链接
                 links = soup.find_all('a', href=True)
                 for link in links:
                     href = link.get('href', '')
-                    if 'mp.weixin.qq.com' in href and '/s?' in href:
-                        # 清理链接
-                        clean_url = href.split('&')[0] + '&' + '&'.join(href.split('&')[1:])
-                        if clean_url not in article_urls:
-                            article_urls.append(clean_url)
+                    
+                    # 处理搜狗的重定向链接
+                    if 'weixin.sogou.com' in href and 'url=' in href:
+                        import urllib.parse
+                        try:
+                            # 提取重定向的真实URL
+                            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                            if 'url' in parsed and parsed['url']:
+                                real_url = parsed['url'][0]
+                                # URL解码
+                                real_url = urllib.parse.unquote(real_url)
+                                if 'mp.weixin.qq.com' in real_url and '/s?' in real_url:
+                                    if real_url not in found_links:
+                                        found_links.add(real_url)
+                                        article_urls.append(real_url)
+                                        print(f"🔗 找到文章链接: {real_url}")
+                        except Exception as e:
+                            print(f"解析链接失败: {e}")
+                            continue
+                    
+                    # 直接包含微信链接的情况
+                    elif 'mp.weixin.qq.com' in href and '/s?' in href:
+                        if href.startswith('//'):
+                            href = 'https:' + href
+                        elif href.startswith('/'):
+                            href = 'https://mp.weixin.qq.com' + href
+                        
+                        if href not in found_links:
+                            found_links.add(href)
+                            article_urls.append(href)
+                            print(f"🔗 找到直接链接: {href}")
                 
-                print(f"✅ 找到 {len(article_urls)} 个文章链接")
+                # 方法2: 查找搜索结果区域的链接
+                result_divs = soup.find_all('div', class_=['result', 'news-item', 'txt-box'])
+                for div in result_divs:
+                    link = div.find('a', href=True)
+                    if link:
+                        href = link.get('href', '')
+                        if 'weixin.sogou.com' in href and 'url=' in href:
+                            import urllib.parse
+                            try:
+                                parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                                if 'url' in parsed and parsed['url']:
+                                    real_url = urllib.parse.unquote(parsed['url'][0])
+                                    if 'mp.weixin.qq.com' in real_url:
+                                        if real_url not in found_links:
+                                            found_links.add(real_url)
+                                            article_urls.append(real_url)
+                                            print(f"🔗 找到结果链接: {real_url}")
+                            except Exception as e:
+                                continue
+                
+                print(f"✅ 找到 {len(found_links)} 个新文章链接")
                 
             except Exception as e:
                 print(f"❌ 搜索失败: {str(e)}")
                 continue
         
-        return article_urls
+        # 去重并返回
+        unique_urls = list(dict.fromkeys(article_urls))  # 保持顺序的去重
+        print(f"🎯 总共找到 {len(unique_urls)} 个唯一文章链接")
+        
+        return unique_urls
     
     def auto_scrape_keyword(self, keyword: str, max_articles: int = 10) -> Dict:
         """自动采集指定关键词的文章"""
