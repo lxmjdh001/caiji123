@@ -354,6 +354,16 @@ cat > templates/admin.html << 'EOF'
                         </select>
                     </div>
                     
+                    <div class="form-group">
+                        <label for="batchSize">批量采集设置 - 每批采集数量</label>
+                        <input type="number" id="batchSize" value="100" min="1" max="1000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="restMinutes">休息时间（分钟）</label>
+                        <input type="number" id="restMinutes" value="5" min="1" max="60">
+                    </div>
+                    
                     <button class="btn success" onclick="startAutoScraper()">启动自动采集</button>
                     <button class="btn danger" onclick="stopAutoScraper()">停止自动采集</button>
                     
@@ -544,8 +554,25 @@ cat > templates/admin.html << 'EOF'
         function startAutoScraper() {
             const intervalHours = parseInt(document.getElementById('intervalHours').value);
             const maxArticles = parseInt(document.getElementById('maxArticles').value);
+            const batchSize = parseInt(document.getElementById('batchSize').value);
+            const restMinutes = parseInt(document.getElementById('restMinutes').value);
             
-            fetch('/api/keywords')
+            // 先设置批量采集参数
+            fetch('/api/auto-scraper/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    batch_size: batchSize,
+                    rest_minutes: restMinutes
+                })
+            })
+            .then(response => response.json())
+            .then(() => {
+                // 然后获取关键词并启动采集
+                return fetch('/api/keywords');
+            })
             .then(response => response.json())
             .then(keywords => {
                 if (keywords.length === 0) {
@@ -569,7 +596,7 @@ cat > templates/admin.html << 'EOF'
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('自动采集服务启动成功');
+                        alert(`自动采集服务启动成功！\n批量设置: 每${batchSize}篇休息${restMinutes}分钟`);
                         checkAutoScraperStatus();
                     } else {
                         alert('启动失败: ' + data.message);
