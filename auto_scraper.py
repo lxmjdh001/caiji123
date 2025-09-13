@@ -181,11 +181,42 @@ class AutoScraper:
                 sogou_links = soup.find_all('a', id=lambda x: x and 'sogou_vr' in x)
                 print(f"🔍 找到 {len(sogou_links)} 个搜狗VR链接")
                 
-                for link in sogou_links:
+                for i, link in enumerate(sogou_links):
                     href = link.get('href', '')
-                    if href and 'weixin.sogou.com' in href:
-                        print(f"🔍 搜狗VR链接: {href[:100]}...")
-                        # 这里可以添加额外的处理逻辑
+                    if href:
+                        print(f"🔍 搜狗VR链接 {i+1}: {href[:100]}...")
+                        
+                        # 处理搜狗VR链接
+                        if 'weixin.sogou.com' in href and 'url=' in href:
+                            import urllib.parse
+                            try:
+                                print(f"🔍 处理VR链接: {href[:100]}...")
+                                
+                                # 提取重定向的真实URL
+                                parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                                if 'url' in parsed and parsed['url']:
+                                    real_url = parsed['url'][0]
+                                    print(f"🔍 VR链接提取的URL参数: {real_url[:100]}...")
+                                    
+                                    # URL解码
+                                    real_url = urllib.parse.unquote(real_url)
+                                    print(f"🔍 VR链接解码后的URL: {real_url[:100]}...")
+                                    
+                                    # 检查是否是微信文章链接
+                                    if 'mp.weixin.qq.com' in real_url:
+                                        # 检查是否已经采集过这篇文章
+                                        if not self.db.is_article_exists(real_url):
+                                            if real_url not in found_links:
+                                                found_links.add(real_url)
+                                                article_urls.append(real_url)
+                                                print(f"🔗 VR链接找到新文章: {real_url}")
+                                        else:
+                                            print(f"⏭️ VR链接跳过已采集文章: {real_url}")
+                                    else:
+                                        print(f"❌ VR链接不是微信文章: {real_url}")
+                            except Exception as e:
+                                print(f"❌ VR链接解析失败: {e}")
+                                continue
                 
                 print(f"✅ 找到 {len(found_links)} 个新文章链接")
                 
