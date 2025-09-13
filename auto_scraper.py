@@ -108,14 +108,20 @@ class AutoScraper:
                     if 'weixin.sogou.com' in href and 'url=' in href:
                         import urllib.parse
                         try:
+                            print(f"🔍 处理搜狗链接: {href[:100]}...")
+                            
                             # 提取重定向的真实URL
                             parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
                             if 'url' in parsed and parsed['url']:
                                 real_url = parsed['url'][0]
+                                print(f"🔍 提取的URL参数: {real_url[:100]}...")
+                                
                                 # URL解码
                                 real_url = urllib.parse.unquote(real_url)
+                                print(f"🔍 解码后的URL: {real_url[:100]}...")
                                 
-                                if 'mp.weixin.qq.com' in real_url and '/s?' in real_url:
+                                # 检查是否是微信文章链接
+                                if 'mp.weixin.qq.com' in real_url:
                                     # 检查是否已经采集过这篇文章
                                     if not self.db.is_article_exists(real_url):
                                         if real_url not in found_links:
@@ -124,6 +130,8 @@ class AutoScraper:
                                             print(f"🔗 找到新文章链接: {real_url}")
                                     else:
                                         print(f"⏭️ 跳过已采集文章: {real_url}")
+                                else:
+                                    print(f"❌ 不是微信文章链接: {real_url}")
                         except Exception as e:
                             print(f"解析链接失败: {e}")
                             continue
@@ -142,23 +150,42 @@ class AutoScraper:
                 
                 # 方法2: 查找搜索结果区域的链接
                 result_divs = soup.find_all('div', class_=['result', 'news-item', 'txt-box'])
-                for div in result_divs:
+                print(f"🔍 找到 {len(result_divs)} 个结果区域")
+                
+                for i, div in enumerate(result_divs):
                     link = div.find('a', href=True)
                     if link:
                         href = link.get('href', '')
+                        print(f"🔍 结果区域 {i+1} 的链接: {href[:100]}...")
+                        
                         if 'weixin.sogou.com' in href and 'url=' in href:
                             import urllib.parse
                             try:
                                 parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
                                 if 'url' in parsed and parsed['url']:
                                     real_url = urllib.parse.unquote(parsed['url'][0])
+                                    print(f"🔍 结果区域解码URL: {real_url[:100]}...")
+                                    
                                     if 'mp.weixin.qq.com' in real_url:
                                         if real_url not in found_links:
                                             found_links.add(real_url)
                                             article_urls.append(real_url)
                                             print(f"🔗 找到结果链接: {real_url}")
+                                    else:
+                                        print(f"❌ 结果区域不是微信链接: {real_url}")
                             except Exception as e:
+                                print(f"❌ 结果区域解析失败: {e}")
                                 continue
+                
+                # 方法3: 查找所有包含 sogou_vr 的链接（搜狗特有的ID）
+                sogou_links = soup.find_all('a', id=lambda x: x and 'sogou_vr' in x)
+                print(f"🔍 找到 {len(sogou_links)} 个搜狗VR链接")
+                
+                for link in sogou_links:
+                    href = link.get('href', '')
+                    if href and 'weixin.sogou.com' in href:
+                        print(f"🔍 搜狗VR链接: {href[:100]}...")
+                        # 这里可以添加额外的处理逻辑
                 
                 print(f"✅ 找到 {len(found_links)} 个新文章链接")
                 
