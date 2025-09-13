@@ -111,6 +111,21 @@ class Database:
         finally:
             conn.close()
     
+    def is_article_exists(self, url: str) -> bool:
+        """检查文章是否已存在"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('SELECT COUNT(*) FROM articles WHERE url = ?', (url,))
+            count = cursor.fetchone()[0]
+            return count > 0
+        except Exception as e:
+            print(f"检查文章存在性失败: {e}")
+            return False
+        finally:
+            conn.close()
+    
     def get_keywords(self, status: str = 'active') -> List[Dict]:
         """获取关键词列表"""
         conn = sqlite3.connect(self.db_path)
@@ -163,6 +178,21 @@ class Database:
         except Exception as e:
             conn.rollback()
             raise e
+        finally:
+            conn.close()
+    
+    def is_article_exists(self, url: str) -> bool:
+        """检查文章是否已存在"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('SELECT COUNT(*) FROM articles WHERE url = ?', (url,))
+            count = cursor.fetchone()[0]
+            return count > 0
+        except Exception as e:
+            print(f"检查文章存在性失败: {e}")
+            return False
         finally:
             conn.close()
     
@@ -225,6 +255,21 @@ class Database:
         finally:
             conn.close()
     
+    def is_article_exists(self, url: str) -> bool:
+        """检查文章是否已存在"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('SELECT COUNT(*) FROM articles WHERE url = ?', (url,))
+            count = cursor.fetchone()[0]
+            return count > 0
+        except Exception as e:
+            print(f"检查文章存在性失败: {e}")
+            return False
+        finally:
+            conn.close()
+    
     def update_task_status(self, task_id: int, status: str, result: str = None, error: str = None):
         """更新任务状态"""
         conn = sqlite3.connect(self.db_path)
@@ -251,6 +296,21 @@ class Database:
         except Exception as e:
             conn.rollback()
             raise e
+        finally:
+            conn.close()
+    
+    def is_article_exists(self, url: str) -> bool:
+        """检查文章是否已存在"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('SELECT COUNT(*) FROM articles WHERE url = ?', (url,))
+            count = cursor.fetchone()[0]
+            return count > 0
+        except Exception as e:
+            print(f"检查文章存在性失败: {e}")
+            return False
         finally:
             conn.close()
     
@@ -374,5 +434,20 @@ class Database:
         except Exception as e:
             conn.rollback()
             raise e
+        finally:
+            conn.close()
+    
+    def is_article_exists(self, url: str) -> bool:
+        """检查文章是否已存在"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('SELECT COUNT(*) FROM articles WHERE url = ?', (url,))
+            count = cursor.fetchone()[0]
+            return count > 0
+        except Exception as e:
+            print(f"检查文章存在性失败: {e}")
+            return False
         finally:
             conn.close()

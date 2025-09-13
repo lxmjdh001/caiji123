@@ -78,7 +78,23 @@ class AutoScraper:
                 response = self.session.get(url, headers=headers, timeout=30)
                 response.raise_for_status()
                 
+                print(f"📄 页面响应状态: {response.status_code}")
+                print(f"📄 页面内容长度: {len(response.content)} 字节")
+                
                 soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # 调试：检查页面是否包含搜索结果
+                if "以下内容来自微信公众平台" in response.text:
+                    print("✅ 页面包含微信搜索结果")
+                else:
+                    print("❌ 页面不包含微信搜索结果")
+                    print(f"页面标题: {soup.title.string if soup.title else '无标题'}")
+                
+                # 调试：检查是否有反爬虫提示
+                if "验证码" in response.text or "captcha" in response.text.lower():
+                    print("⚠️ 页面可能包含验证码")
+                if "访问过于频繁" in response.text:
+                    print("⚠️ 访问过于频繁")
                 
                 # 多种方式查找文章链接
                 found_links = set()
@@ -98,11 +114,15 @@ class AutoScraper:
                                 real_url = parsed['url'][0]
                                 # URL解码
                                 real_url = urllib.parse.unquote(real_url)
-                                if 'mp.weixin.qq.com' in real_url and '/s?' in real_url:
-                                    if real_url not in found_links:
-                                        found_links.add(real_url)
-                                        article_urls.append(real_url)
-                                        print(f"🔗 找到文章链接: {real_url}")
+                        if 'mp.weixin.qq.com' in real_url and '/s?' in real_url:
+                            # 检查是否已经采集过这篇文章
+                            if not self.db.is_article_exists(real_url):
+                                if real_url not in found_links:
+                                    found_links.add(real_url)
+                                    article_urls.append(real_url)
+                                    print(f"🔗 找到新文章链接: {real_url}")
+                            else:
+                                print(f"⏭️ 跳过已采集文章: {real_url}")
                         except Exception as e:
                             print(f"解析链接失败: {e}")
                             continue
