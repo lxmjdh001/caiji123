@@ -32,20 +32,22 @@ class AutoScraper:
         """获取随机请求头"""
         return {
             'User-Agent': self.ua.random,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
             'Sec-Fetch-Dest': 'document',
             'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-User': '?1',
             'Cache-Control': 'max-age=0',
             'DNT': '1',
-            'Referer': 'https://www.baidu.com/',
+            'Referer': 'https://weixin.sogou.com/weixin?type=2&query=test&ie=utf8',
             'Sec-Ch-Ua': '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
             'Sec-Ch-Ua-Mobile': '?0',
-            'Sec-Ch-Ua-Platform': '"Windows"',
+            'Sec-Ch-Ua-Platform': '"macOS"',
+            'Cookie': 'ABTEST=0|1757730654|v17; IPLOC=CN1100; SUID=1234567890ABCDEF; SUV=1757730654; SNUID=1234567890ABCDEF; JSESSIONID=1234567890ABCDEF'
         }
     
     def search_wechat_articles(self, keyword: str, max_pages: int = 3) -> List[str]:
@@ -128,13 +130,23 @@ class AutoScraper:
                                     redirect_url = f"https://weixin.sogou.com{href}"
                                     print(f"🔍 尝试访问重定向链接: {redirect_url}")
                                     
-                                    response = requests.get(redirect_url, headers=self.get_headers(), timeout=10, allow_redirects=True)
+                                    # 增加随机延迟，模拟人类行为
+                                    import time
+                                    time.sleep(random.uniform(2, 5))
+                                    
+                                    # 使用会话保持cookies
+                                    session = requests.Session()
+                                    response = session.get(redirect_url, headers=self.get_headers(), timeout=15, allow_redirects=True)
                                     final_url = response.url
                                     print(f"🔍 重定向最终URL: {final_url[:100]}...")
                                     
                                     if 'mp.weixin.qq.com' in final_url and '/s?' in final_url:
                                         real_url = final_url
                                         print(f"✅ 通过重定向找到微信文章链接: {real_url}")
+                                    elif 'antispider' in final_url:
+                                        print(f"⚠️ 触发反爬虫检测，增加延迟...")
+                                        time.sleep(random.uniform(30, 60))
+                                        continue
                                     else:
                                         print(f"❌ 重定向后不是微信文章链接，跳过")
                                         continue
@@ -189,13 +201,23 @@ class AutoScraper:
                                     redirect_url = f"https://weixin.sogou.com{href}"
                                     print(f"🔍 尝试访问重定向链接: {redirect_url}")
                                     
-                                    response = requests.get(redirect_url, headers=self.get_headers(), timeout=10, allow_redirects=True)
+                                    # 增加随机延迟，模拟人类行为
+                                    import time
+                                    time.sleep(random.uniform(2, 5))
+                                    
+                                    # 使用会话保持cookies
+                                    session = requests.Session()
+                                    response = session.get(redirect_url, headers=self.get_headers(), timeout=15, allow_redirects=True)
                                     final_url = response.url
                                     print(f"🔍 重定向最终URL: {final_url[:100]}...")
                                     
                                     if 'mp.weixin.qq.com' in final_url and '/s?' in final_url:
                                         real_url = final_url
                                         print(f"✅ 通过重定向找到微信文章链接: {real_url}")
+                                    elif 'antispider' in final_url:
+                                        print(f"⚠️ 触发反爬虫检测，增加延迟...")
+                                        time.sleep(random.uniform(30, 60))
+                                        continue
                                     else:
                                         print(f"❌ 重定向后不是微信文章链接，跳过")
                                         continue
