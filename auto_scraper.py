@@ -48,16 +48,15 @@ class AutoScraper:
         """搜索微信公众号文章链接"""
         print(f"🔍 搜索关键词: {keyword}")
         
-        # 使用多个搜索源
+        # 使用多个搜索源 - 优先使用百度避免验证码
         search_sources = [
-            # 搜狗微信搜索
-            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8",
-            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8&page=2",
-            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8&page=3",
-            # 百度搜索微信文章
+            # 百度搜索微信文章（避免搜狗验证码）
             f"https://www.baidu.com/s?wd=site:mp.weixin.qq.com {keyword}",
-            # Google搜索（如果可访问）
-            f"https://www.google.com/search?q=site:mp.weixin.qq.com {keyword}"
+            f"https://www.baidu.com/s?wd=site:mp.weixin.qq.com {keyword}&pn=10",
+            f"https://www.baidu.com/s?wd=site:mp.weixin.qq.com {keyword}&pn=20",
+            # 备用搜狗搜索（如果百度不行再用）
+            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8",
+            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8&page=2"
         ]
         
         article_urls = []
@@ -100,7 +99,8 @@ class AutoScraper:
                 
                 # 调试：检查是否有反爬虫提示
                 if "验证码" in response.text or "captcha" in response.text.lower() or "VerifyCode" in response.text:
-                    print("⚠️ 检测到验证码页面，跳过此页面")
+                    print("⚠️ 检测到验证码页面，等待2分钟后重试...")
+                    time.sleep(120)  # 等待2分钟
                     continue
                 if "访问过于频繁" in response.text or "环境异常" in response.text:
                     print("⚠️ 检测到访问限制，等待更长时间...")
@@ -112,6 +112,33 @@ class AutoScraper:
                 
                 # 多种方式查找文章链接
                 found_links = set()
+                
+                # 方法0: 如果是百度搜索，特殊处理
+                if 'baidu.com' in url:
+                    print("🔍 处理百度搜索结果...")
+                    # 百度搜索结果通常在特定的div中
+                    result_divs = soup.find_all('div', class_='result')
+                    print(f"🔍 找到 {len(result_divs)} 个百度结果")
+                    
+                    for div in result_divs:
+                        # 查找标题链接
+                        title_link = div.find('h3').find('a', href=True) if div.find('h3') else None
+                        if title_link:
+                            href = title_link['href']
+                            if 'mp.weixin.qq.com' in href and '/s?' in href:
+                                if href.startswith('//'):
+                                    href = 'https:' + href
+                                elif href.startswith('/'):
+                                    href = 'https://mp.weixin.qq.com' + href
+                                
+                                # 检查是否已经采集过
+                                if not self.db.is_article_exists(href):
+                                    if href not in found_links:
+                                        found_links.add(href)
+                                        article_urls.append(href)
+                                        print(f"🔗 百度找到文章链接: {href}")
+                                else:
+                                    print(f"⏭️ 跳过已采集文章: {href}")
                 
                 # 方法1: 查找搜狗搜索结果中的链接
                 links = soup.find_all('a', href=True)
