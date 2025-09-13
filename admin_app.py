@@ -142,6 +142,19 @@ def stop_auto_scraper():
     
     return jsonify(result)
 
+@app.route('/api/auto-scraper/settings', methods=['POST'])
+def set_auto_scraper_settings():
+    """设置自动采集参数"""
+    data = request.get_json()
+    batch_size = data.get('batch_size', 100)
+    rest_minutes = data.get('rest_minutes', 5)
+    
+    try:
+        auto_scraper.set_batch_settings(batch_size, rest_minutes)
+        return jsonify({'success': True, 'message': f'批量采集设置已更新: 每{batch_size}篇休息{rest_minutes}分钟'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/api/auto-scraper/status')
 def get_auto_scraper_status():
     """获取自动采集状态"""

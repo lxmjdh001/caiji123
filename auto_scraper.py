@@ -24,6 +24,9 @@ class AutoScraper:
         self.ua = UserAgent()
         self.session = requests.Session()
         self.is_running = False
+        self.batch_size = 100  # 每批采集100篇
+        self.rest_minutes = 5   # 休息5分钟
+        self.current_batch_count = 0  # 当前批次计数
         
     def get_headers(self):
         """获取随机请求头"""
@@ -127,8 +130,16 @@ class AutoScraper:
                         # 生成HTML文件
                         self.scraper.save_html(result, html_filename, self.db, url_number)
                         scraped_count += 1
+                        self.current_batch_count += 1
                         
-                        print(f"✅ 采集成功: {result['title']}")
+                        print(f"✅ 采集成功: {result['title']} (累计: {self.current_batch_count})")
+                        
+                        # 检查是否达到批量休息条件
+                        if self.current_batch_count >= self.batch_size:
+                            print(f"🛌 已采集 {self.current_batch_count} 篇文章，休息 {self.rest_minutes} 分钟...")
+                            time.sleep(self.rest_minutes * 60)  # 休息5分钟
+                            self.current_batch_count = 0  # 重置计数
+                            print("⏰ 休息结束，继续采集...")
                     else:
                         failed_count += 1
                         print(f"❌ 采集失败: {url}")
@@ -225,6 +236,13 @@ class AutoScraper:
         self.is_running = False
         return {'success': True, 'message': '自动采集服务已停止'}
     
+    def set_batch_settings(self, batch_size: int = 100, rest_minutes: int = 5):
+        """设置批量采集参数"""
+        self.batch_size = batch_size
+        self.rest_minutes = rest_minutes
+        self.current_batch_count = 0  # 重置计数
+        print(f"📊 批量采集设置已更新: 每 {batch_size} 篇休息 {rest_minutes} 分钟")
+    
     def get_scraping_status(self):
         """获取采集状态"""
         stats = self.db.get_stats()
@@ -233,7 +251,12 @@ class AutoScraper:
         return {
             'is_running': self.is_running,
             'stats': stats,
-            'recent_tasks': recent_tasks
+            'recent_tasks': recent_tasks,
+            'batch_settings': {
+                'batch_size': self.batch_size,
+                'rest_minutes': self.rest_minutes,
+                'current_count': self.current_batch_count
+            }
         }
 
 
