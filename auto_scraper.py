@@ -123,27 +123,23 @@ class AutoScraper:
                                 real_url = urllib.parse.unquote(real_url)
                                 print(f"🔍 URL解码后: {real_url[:100]}...")
                                 
-                                # 尝试Base64解码
+                                # 尝试直接访问重定向链接获取真实URL
                                 try:
-                                    import base64
-                                    # 补全Base64 padding
-                                    missing_padding = len(real_url) % 4
-                                    if missing_padding:
-                                        real_url += '=' * (4 - missing_padding)
+                                    redirect_url = f"https://weixin.sogou.com{href}"
+                                    print(f"🔍 尝试访问重定向链接: {redirect_url}")
                                     
-                                    decoded_bytes = base64.b64decode(real_url)
-                                    decoded_url = decoded_bytes.decode('utf-8')
-                                    print(f"🔍 Base64解码后: {decoded_url[:100]}...")
+                                    response = requests.get(redirect_url, headers=self.get_headers(), timeout=10, allow_redirects=True)
+                                    final_url = response.url
+                                    print(f"🔍 重定向最终URL: {final_url[:100]}...")
                                     
-                                    # 检查是否是微信文章链接
-                                    if 'mp.weixin.qq.com' in decoded_url and '/s?' in decoded_url:
-                                        real_url = decoded_url
-                                        print(f"✅ 找到微信文章链接: {real_url}")
+                                    if 'mp.weixin.qq.com' in final_url and '/s?' in final_url:
+                                        real_url = final_url
+                                        print(f"✅ 通过重定向找到微信文章链接: {real_url}")
                                     else:
-                                        print(f"❌ Base64解码后也不是微信文章链接")
+                                        print(f"❌ 重定向后不是微信文章链接，跳过")
                                         continue
                                 except Exception as e:
-                                    print(f"❌ Base64解码失败: {e}")
+                                    print(f"❌ 重定向访问失败: {e}")
                                     continue
                                 
                                 # 检查是否已经采集过这篇文章
@@ -188,27 +184,23 @@ class AutoScraper:
                                 real_url = urllib.parse.unquote(real_url)
                                 print(f"🔍 URL解码后: {real_url[:100]}...")
                                 
-                                # 尝试Base64解码
+                                # 尝试直接访问重定向链接获取真实URL
                                 try:
-                                    import base64
-                                    # 补全Base64 padding
-                                    missing_padding = len(real_url) % 4
-                                    if missing_padding:
-                                        real_url += '=' * (4 - missing_padding)
+                                    redirect_url = f"https://weixin.sogou.com{href}"
+                                    print(f"🔍 尝试访问重定向链接: {redirect_url}")
                                     
-                                    decoded_bytes = base64.b64decode(real_url)
-                                    decoded_url = decoded_bytes.decode('utf-8')
-                                    print(f"🔍 Base64解码后: {decoded_url[:100]}...")
+                                    response = requests.get(redirect_url, headers=self.get_headers(), timeout=10, allow_redirects=True)
+                                    final_url = response.url
+                                    print(f"🔍 重定向最终URL: {final_url[:100]}...")
                                     
-                                    # 检查是否是微信文章链接
-                                    if 'mp.weixin.qq.com' in decoded_url and '/s?' in decoded_url:
-                                        real_url = decoded_url
-                                        print(f"✅ 找到微信文章链接: {real_url}")
+                                    if 'mp.weixin.qq.com' in final_url and '/s?' in final_url:
+                                        real_url = final_url
+                                        print(f"✅ 通过重定向找到微信文章链接: {real_url}")
                                     else:
-                                        print(f"❌ Base64解码后也不是微信文章链接")
+                                        print(f"❌ 重定向后不是微信文章链接，跳过")
                                         continue
                                 except Exception as e:
-                                    print(f"❌ Base64解码失败: {e}")
+                                    print(f"❌ 重定向访问失败: {e}")
                                     continue
                                 
                                 # 检查是否已经采集过这篇文章
