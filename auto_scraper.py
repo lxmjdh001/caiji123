@@ -116,9 +116,39 @@ class AutoScraper:
                 # 方法0: 如果是百度搜索，特殊处理
                 if 'baidu.com' in url:
                     print("🔍 处理百度搜索结果...")
-                    # 百度搜索结果通常在特定的div中
+                    
+                    # 百度搜索结果有多种结构，需要全面搜索
+                    # 1. 查找所有包含微信链接的a标签
+                    all_links = soup.find_all('a', href=True)
+                    wechat_links = []
+                    
+                    for link in all_links:
+                        href = link.get('href', '')
+                        if 'mp.weixin.qq.com' in href and '/s?' in href:
+                            wechat_links.append(href)
+                    
+                    print(f"🔍 找到 {len(wechat_links)} 个微信链接")
+                    
+                    # 2. 处理找到的微信链接
+                    for href in wechat_links:
+                        # 处理相对链接
+                        if href.startswith('//'):
+                            href = 'https:' + href
+                        elif href.startswith('/'):
+                            href = 'https://mp.weixin.qq.com' + href
+                        
+                        # 检查是否已经采集过
+                        if not self.db.is_article_exists(href):
+                            if href not in found_links:
+                                found_links.add(href)
+                                article_urls.append(href)
+                                print(f"🔗 百度找到文章链接: {href}")
+                        else:
+                            print(f"⏭️ 跳过已采集文章: {href}")
+                    
+                    # 3. 额外查找百度搜索结果区域的链接
                     result_divs = soup.find_all('div', class_='result')
-                    print(f"🔍 找到 {len(result_divs)} 个百度结果")
+                    print(f"🔍 找到 {len(result_divs)} 个百度结果区域")
                     
                     for div in result_divs:
                         # 查找标题链接
@@ -136,7 +166,7 @@ class AutoScraper:
                                     if href not in found_links:
                                         found_links.add(href)
                                         article_urls.append(href)
-                                        print(f"🔗 百度找到文章链接: {href}")
+                                        print(f"🔗 百度结果区域找到文章链接: {href}")
                                 else:
                                     print(f"⏭️ 跳过已采集文章: {href}")
                 
