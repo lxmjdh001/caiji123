@@ -52,16 +52,112 @@ class AutoScraper:
         """搜索微信公众号文章链接"""
         print(f"🔍 搜索关键词: {keyword}")
         
-        # 使用预定义的微信文章链接进行测试
-        # 这些是一些真实的微信文章链接，用于测试采集功能
-        test_articles = [
-            "https://mp.weixin.qq.com/s?src=11&timestamp=1757730654&ver=6233&signature=grZ3FwVK4JCO9kVWu7OyxnkYbGipPLWvq8l3QGch7qXnx-Aq2-AgqtP9a8uwmOfShOehN7eIp9pWxg7vPBGOAYCMAKbs1XFWQeBP4WmV1B0KiWdw4qRQVPvsw2y0Wd5w&new=1",
-            "https://mp.weixin.qq.com/s?src=11&timestamp=1757730655&ver=6233&signature=grZ3FwVK4JCO9kVWu7OyxnkYbGipPLWvq8l3QGch7qXnx-Aq2-AgqtP9a8uwmOfShOehN7eIp9pWxg7vPBGOAYCMAKbs1XFWQeBP4WmV1B0KiWdw4qRQVPvsw2y0Wd5w&new=1",
-            "https://mp.weixin.qq.com/s?src=11&timestamp=1757730656&ver=6233&signature=grZ3FwVK4JCO9kVWu7OyxnkYbGipPLWvq8l3QGch7qXnx-Aq2-AgqtP9a8uwmOfShOehN7eIp9pWxg7vPBGOAYCMAKbs1XFWQeBP4WmV1B0KiWdw4qRQVPvsw2y0Wd5w&new=1"
+        # 使用搜狗微信搜索
+        search_sources = [
+            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8",
+            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8&page=2",
+            f"https://weixin.sogou.com/weixin?type=2&query={keyword}&ie=utf8&page=3"
         ]
         
-        print(f"📝 使用测试文章链接进行采集测试")
-        return test_articles[:max_pages]
+        article_urls = []
+        
+        for i, url in enumerate(search_sources[:max_pages]):
+            try:
+                print(f"📄 搜索页面 {i+1}: {url}")
+                # 增加延迟
+                delay = random.uniform(3, 6)
+                print(f"⏳ 等待 {delay:.1f} 秒...")
+                time.sleep(delay)
+                
+                # 发送请求
+                headers = self.get_headers()
+                response = requests.get(url, headers=headers, timeout=30)
+                print(f"📄 页面响应状态: {response.status_code}")
+                print(f"📄 页面内容长度: {len(response.content)} 字节")
+                
+                if response.status_code != 200:
+                    print(f"❌ 请求失败，状态码: {response.status_code}")
+                    continue
+                
+                # 检查是否有验证码
+                if "验证码" in response.text or "VerifyCode" in response.text:
+                    print("⚠️ 检测到验证码页面，等待2分钟后重试...")
+                    time.sleep(120)
+                    continue
+                
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # 检查页面标题
+                title = soup.title.string if soup.title else '无标题'
+                print(f"📄 页面标题: {title}")
+                
+                # 查找所有链接
+                links = soup.find_all('a', href=True)
+                print(f"🔍 找到 {len(links)} 个链接")
+                
+                # 查找搜狗搜索结果中的微信文章链接
+                wechat_links = []
+                for link in links:
+                    href = link.get('href', '')
+                    
+                    # 处理搜狗的重定向链接
+                    if 'weixin.sogou.com' in href and 'url=' in href:
+                        try:
+                            print(f"🔍 处理搜狗链接: {href[:100]}...")
+                            
+                            # 提取重定向的真实URL
+                            import urllib.parse
+                            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                            if 'url' in parsed and parsed['url']:
+                                real_url = parsed['url'][0]
+                                print(f"🔍 提取的URL参数: {real_url[:100]}...")
+                                
+                                # URL解码
+                                real_url = urllib.parse.unquote(real_url)
+                                print(f"🔍 解码后的URL: {real_url[:100]}...")
+                                
+                                # 检查是否是微信文章链接
+                                if 'mp.weixin.qq.com' in real_url and '/s?' in real_url:
+                                    # 检查是否已经采集过这篇文章
+                                    if not self.db.is_article_exists(real_url):
+                                        if real_url not in wechat_links:
+                                            wechat_links.append(real_url)
+                                            print(f"🔗 找到新文章链接: {real_url}")
+                                    else:
+                                        print(f"⏭️ 跳过已采集文章: {real_url}")
+                                else:
+                                    print(f"❌ 不是微信文章链接: {real_url}")
+                        except Exception as e:
+                            print(f"解析链接失败: {e}")
+                            continue
+                    
+                    # 直接包含微信链接的情况
+                    elif 'mp.weixin.qq.com' in href and '/s?' in href:
+                        if href.startswith('//'):
+                            href = 'https:' + href
+                        elif href.startswith('/'):
+                            href = 'https://mp.weixin.qq.com' + href
+                        
+                        # 检查是否已经采集过
+                        if not self.db.is_article_exists(href):
+                            if href not in wechat_links:
+                                wechat_links.append(href)
+                                print(f"🔗 找到直接链接: {href}")
+                        else:
+                            print(f"⏭️ 跳过已采集文章: {href}")
+                
+                article_urls.extend(wechat_links)
+                print(f"✅ 本页面找到 {len(wechat_links)} 个新文章链接")
+                
+            except Exception as e:
+                print(f"❌ 搜索页面失败: {e}")
+                continue
+        
+        # 去重
+        unique_urls = list(set(article_urls))
+        print(f"🎯 总共找到 {len(unique_urls)} 个唯一文章链接")
+        
+        return unique_urls
     
     def search_wechat_articles_old(self, keyword: str, max_pages: int = 3) -> List[str]:
         """旧的搜索方法（已废弃）"""
