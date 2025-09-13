@@ -7,11 +7,16 @@
 from flask import Flask, render_template, request, jsonify
 import threading
 import time
+import os
 from datetime import datetime
 from scraper import WeChatScraper
 from database import Database
 
-app = Flask(__name__)
+# 获取当前文件的目录
+current_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(current_dir, 'templates')
+
+app = Flask(__name__, template_folder=template_dir)
 
 # 全局状态
 scraping_status = {

@@ -777,8 +777,416 @@ echo "📁 templates 目录内容:"
 ls -la templates/
 
 echo ""
+# 检查是否还需要创建 index.html（前台应用需要）
+if [ ! -f "templates/index.html" ]; then
+    echo "📝 创建 index.html 模板文件（前台应用需要）..."
+    cat > templates/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信公众号文章采集工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .input-group {
+            margin-bottom: 30px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .result h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .result-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #4facfe;
+        }
+        
+        .result-item strong {
+            color: #333;
+        }
+        
+        .error {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .actions .btn {
+            flex: 1;
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+        }
+        
+        .actions .btn.secondary {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📰 微信公众号文章采集工具</h1>
+            <p>简单、快速、高效的微信文章采集解决方案</p>
+        </div>
+        
+        <div class="content">
+            <div class="input-group">
+                <label for="url">文章链接</label>
+                <input type="url" id="url" placeholder="请输入微信公众号文章链接..." />
+            </div>
+            
+            <button class="btn" id="scrapeBtn" onclick="startScraping()">开始采集</button>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="status" id="status">准备开始</div>
+            </div>
+            
+            <div class="error" id="error"></div>
+            
+            <div class="result" id="result">
+                <h3>📋 采集结果</h3>
+                <div id="resultContent"></div>
+                
+                <div class="actions">
+                    <button class="btn" onclick="downloadJSON()">下载JSON</button>
+                    <button class="btn" onclick="downloadHTML()">下载HTML</button>
+                    <button class="btn secondary" onclick="viewHTML()">查看HTML</button>
+                    <button class="btn secondary" onclick="copyResult()">复制结果</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scrapingInterval = null;
+        
+        function startScraping() {
+            const url = document.getElementById('url').value.trim();
+            
+            if (!url) {
+                showError('请输入文章链接');
+                return;
+            }
+            
+            if (!url.includes('mp.weixin.qq.com')) {
+                showError('请输入有效的微信公众号文章链接');
+                return;
+            }
+            
+            // 重置UI
+            resetUI();
+            
+            // 发送采集请求
+            fetch('/api/scrape', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: url })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showProgress();
+                    startPolling();
+                } else {
+                    showError(data.message);
+                }
+            })
+            .catch(error => {
+                showError('网络错误: ' + error.message);
+            });
+        }
+        
+        function startPolling() {
+            scrapingInterval = setInterval(() => {
+                fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateProgress(data);
+                    
+                    if (!data.is_running) {
+                        clearInterval(scrapingInterval);
+                        
+                        if (data.error) {
+                            showError(data.error);
+                        } else if (data.result) {
+                            showResult(data.result);
+                        }
+                    }
+                })
+                .catch(error => {
+                    clearInterval(scrapingInterval);
+                    showError('状态查询失败: ' + error.message);
+                });
+            }, 1000);
+        }
+        
+        function updateProgress(data) {
+            const progressFill = document.getElementById('progressFill');
+            const status = document.getElementById('status');
+            
+            progressFill.style.width = data.progress + '%';
+            status.textContent = data.message;
+        }
+        
+        function showProgress() {
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('scrapeBtn').disabled = true;
+            document.getElementById('scrapeBtn').textContent = '采集中...';
+        }
+        
+        function showResult(result) {
+            const resultDiv = document.getElementById('result');
+            const contentDiv = document.getElementById('resultContent');
+            
+            contentDiv.innerHTML = `
+                <div class="result-item">
+                    <strong>标题:</strong> ${result.title}
+                </div>
+                <div class="result-item">
+                    <strong>作者:</strong> ${result.author}
+                </div>
+                <div class="result-item">
+                    <strong>字数:</strong> ${result.word_count}
+                </div>
+                <div class="result-item">
+                    <strong>时间:</strong> ${result.scrape_time}
+                </div>
+                <div class="result-item">
+                    <strong>内容预览:</strong><br>
+                    <div style="margin-top: 10px; max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                        ${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}
+                    </div>
+                </div>
+            `;
+            
+            resultDiv.style.display = 'block';
+            resetUI();
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            resetUI();
+        }
+        
+        function resetUI() {
+            document.getElementById('progressContainer').style.display = 'none';
+            document.getElementById('scrapeBtn').disabled = false;
+            document.getElementById('scrapeBtn').textContent = '开始采集';
+            document.getElementById('error').style.display = 'none';
+        }
+        
+        function downloadJSON() {
+            fetch('/api/result')
+            .then(response => response.json())
+            .then(data => {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `article_${data.scrape_time.replace(/[:\s]/g, '_')}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        function downloadHTML() {
+            fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.html_file) {
+                    window.open(`/api/download/${data.html_file}`, '_blank');
+                } else {
+                    alert('HTML文件未生成');
+                }
+            });
+        }
+        
+        function viewHTML() {
+            fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.html_file) {
+                    window.open(`/api/view/${data.html_file}`, '_blank');
+                } else {
+                    alert('HTML文件未生成');
+                }
+            });
+        }
+        
+        function copyResult() {
+            fetch('/api/result')
+            .then(response => response.json())
+            .then(data => {
+                navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+                .then(() => {
+                    alert('结果已复制到剪贴板');
+                })
+                .catch(() => {
+                    alert('复制失败，请手动复制');
+                });
+            });
+        }
+    </script>
+</body>
+</html>
+EOF
+    echo "✅ index.html 模板文件创建成功"
+fi
+
 echo "🎉 修复完成！现在可以重新启动应用了："
-echo "   python admin_app.py"
 echo ""
-echo "🌐 访问地址: http://localhost:5001"
-echo "🌐 外网访问: http://72.60.193.135:5001"
+echo "📱 前台应用（用户界面）:"
+echo "   python app.py"
+echo "   🌐 访问地址: http://localhost:3000"
+echo "   🌐 外网访问: http://72.60.193.135:3000"
+echo ""
+echo "⚙️ 后台应用（管理界面）:"
+echo "   python admin_app.py"
+echo "   🌐 访问地址: http://localhost:5001"
+echo "   🌐 外网访问: http://72.60.193.135:5001"
+echo ""
+echo "💡 提示：如果需要外网访问，请确保防火墙已开放相应端口："
+echo "   sudo ufw allow 3000/tcp  # 前台应用端口"
+echo "   sudo ufw allow 5001/tcp  # 后台应用端口"
