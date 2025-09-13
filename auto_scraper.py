@@ -114,15 +114,16 @@ class AutoScraper:
                                 real_url = parsed['url'][0]
                                 # URL解码
                                 real_url = urllib.parse.unquote(real_url)
-                        if 'mp.weixin.qq.com' in real_url and '/s?' in real_url:
-                            # 检查是否已经采集过这篇文章
-                            if not self.db.is_article_exists(real_url):
-                                if real_url not in found_links:
-                                    found_links.add(real_url)
-                                    article_urls.append(real_url)
-                                    print(f"🔗 找到新文章链接: {real_url}")
-                            else:
-                                print(f"⏭️ 跳过已采集文章: {real_url}")
+                                
+                                if 'mp.weixin.qq.com' in real_url and '/s?' in real_url:
+                                    # 检查是否已经采集过这篇文章
+                                    if not self.db.is_article_exists(real_url):
+                                        if real_url not in found_links:
+                                            found_links.add(real_url)
+                                            article_urls.append(real_url)
+                                            print(f"🔗 找到新文章链接: {real_url}")
+                                    else:
+                                        print(f"⏭️ 跳过已采集文章: {real_url}")
                         except Exception as e:
                             print(f"解析链接失败: {e}")
                             continue
