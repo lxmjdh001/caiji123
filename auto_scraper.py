@@ -97,6 +97,13 @@ class AutoScraper:
                 
                 # 查找搜狗搜索结果中的微信文章链接
                 wechat_links = []
+                
+                # 先打印前几个链接看看结构
+                print(f"🔍 前5个链接示例:")
+                for i, link in enumerate(links[:5]):
+                    href = link.get('href', '')
+                    print(f"  {i+1}. {href[:150]}...")
+                
                 for link in links:
                     href = link.get('href', '')
                     
@@ -114,19 +121,38 @@ class AutoScraper:
                                 
                                 # URL解码
                                 real_url = urllib.parse.unquote(real_url)
-                                print(f"🔍 解码后的URL: {real_url[:100]}...")
+                                print(f"🔍 URL解码后: {real_url[:100]}...")
                                 
-                                # 检查是否是微信文章链接
-                                if 'mp.weixin.qq.com' in real_url and '/s?' in real_url:
-                                    # 检查是否已经采集过这篇文章
-                                    if not self.db.is_article_exists(real_url):
-                                        if real_url not in wechat_links:
-                                            wechat_links.append(real_url)
-                                            print(f"🔗 找到新文章链接: {real_url}")
+                                # 尝试Base64解码
+                                try:
+                                    import base64
+                                    # 补全Base64 padding
+                                    missing_padding = len(real_url) % 4
+                                    if missing_padding:
+                                        real_url += '=' * (4 - missing_padding)
+                                    
+                                    decoded_bytes = base64.b64decode(real_url)
+                                    decoded_url = decoded_bytes.decode('utf-8')
+                                    print(f"🔍 Base64解码后: {decoded_url[:100]}...")
+                                    
+                                    # 检查是否是微信文章链接
+                                    if 'mp.weixin.qq.com' in decoded_url and '/s?' in decoded_url:
+                                        real_url = decoded_url
+                                        print(f"✅ 找到微信文章链接: {real_url}")
                                     else:
-                                        print(f"⏭️ 跳过已采集文章: {real_url}")
+                                        print(f"❌ Base64解码后也不是微信文章链接")
+                                        continue
+                                except Exception as e:
+                                    print(f"❌ Base64解码失败: {e}")
+                                    continue
+                                
+                                # 检查是否已经采集过这篇文章
+                                if not self.db.is_article_exists(real_url):
+                                    if real_url not in wechat_links:
+                                        wechat_links.append(real_url)
+                                        print(f"🔗 找到新文章链接: {real_url}")
                                 else:
-                                    print(f"❌ 不是微信文章链接: {real_url}")
+                                    print(f"⏭️ 跳过已采集文章: {real_url}")
                         except Exception as e:
                             print(f"解析链接失败: {e}")
                             continue
@@ -145,6 +171,56 @@ class AutoScraper:
                                 print(f"🔗 找到直接链接: {href}")
                         else:
                             print(f"⏭️ 跳过已采集文章: {href}")
+                    
+                    # 检查是否是搜狗的link链接（新的格式）
+                    elif '/link?' in href and 'url=' in href:
+                        try:
+                            print(f"🔍 处理搜狗link链接: {href[:100]}...")
+                            
+                            # 提取重定向的真实URL
+                            import urllib.parse
+                            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                            if 'url' in parsed and parsed['url']:
+                                real_url = parsed['url'][0]
+                                print(f"🔍 提取的URL参数: {real_url[:100]}...")
+                                
+                                # URL解码
+                                real_url = urllib.parse.unquote(real_url)
+                                print(f"🔍 URL解码后: {real_url[:100]}...")
+                                
+                                # 尝试Base64解码
+                                try:
+                                    import base64
+                                    # 补全Base64 padding
+                                    missing_padding = len(real_url) % 4
+                                    if missing_padding:
+                                        real_url += '=' * (4 - missing_padding)
+                                    
+                                    decoded_bytes = base64.b64decode(real_url)
+                                    decoded_url = decoded_bytes.decode('utf-8')
+                                    print(f"🔍 Base64解码后: {decoded_url[:100]}...")
+                                    
+                                    # 检查是否是微信文章链接
+                                    if 'mp.weixin.qq.com' in decoded_url and '/s?' in decoded_url:
+                                        real_url = decoded_url
+                                        print(f"✅ 找到微信文章链接: {real_url}")
+                                    else:
+                                        print(f"❌ Base64解码后也不是微信文章链接")
+                                        continue
+                                except Exception as e:
+                                    print(f"❌ Base64解码失败: {e}")
+                                    continue
+                                
+                                # 检查是否已经采集过这篇文章
+                                if not self.db.is_article_exists(real_url):
+                                    if real_url not in wechat_links:
+                                        wechat_links.append(real_url)
+                                        print(f"🔗 找到新文章链接: {real_url}")
+                                else:
+                                    print(f"⏭️ 跳过已采集文章: {real_url}")
+                        except Exception as e:
+                            print(f"解析link链接失败: {e}")
+                            continue
                 
                 article_urls.extend(wechat_links)
                 print(f"✅ 本页面找到 {len(wechat_links)} 个新文章链接")
