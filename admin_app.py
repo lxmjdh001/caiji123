@@ -7,11 +7,16 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 import threading
 import time
+import os
 from datetime import datetime
 from database import Database
 from auto_scraper import AutoScraper
 
-app = Flask(__name__)
+# 获取当前文件的目录
+current_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(current_dir, 'templates')
+
+app = Flask(__name__, template_folder=template_dir)
 
 # 全局变量
 auto_scraper = AutoScraper()
